@@ -3,11 +3,16 @@
 use core::fmt;
 use core::iter;
 use std::fmt::Display;
+use std::io::Write;
 
 use ff::Field;
+use ff::PrimeField;
 use nonempty::NonEmpty;
 use pasta_curves::pallas;
+use pasta_curves::Fq;
 use rand::{prelude::SliceRandom, CryptoRng, RngCore};
+use std::io;
+use std::process;
 
 use crate::{
     action::Action,
@@ -863,9 +868,17 @@ impl<P: fmt::Debug, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
             &mut rng,
             |rng, partial, maybe| match maybe {
                 MaybeSigned::SigningMetadata(parts) if parts.ak == expected_ak => {
-                    MaybeSigned::Signature(
-                        ask.randomize(&parts.alpha).sign(rng, &partial.sigs.sighash),
-                    )
+                    println!("alpha is: {:?}", &parts.alpha);
+                    println!("msg hash is: {}", hex::encode(&partial.sigs.sighash));
+                    // let signature = ask.randomize(&parts.alpha).sign(rng, &partial.sigs.sighash);
+                    let mut input = String::new();
+                    println!("read signature:");
+                    io::stdin().read_line(&mut input).ok().expect("failed to read signature");
+                    println!("read: {}", input.trim());
+                    let bytes :[u8; 64] = hex::decode(input.trim()).unwrap().try_into().unwrap();
+                    let sig: redpallas::Signature<SpendAuth> = redpallas::Signature::from(bytes);
+                    // println!("{:?}", sig);
+                    MaybeSigned::Signature(sig)
                 }
                 s => s,
             },
